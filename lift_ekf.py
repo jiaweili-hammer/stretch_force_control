@@ -1,6 +1,6 @@
 from RobotRaconteur.Client import *
 import numpy as np 
-from filterpy.kalman import KalmanFilter
+from filterpy.kalman import ExtendedKalmanFilter
 from filterpy.common import Q_discrete_white_noise
 import stretch_body.robot
 import matplotlib.pyplot as plt
@@ -20,10 +20,10 @@ base_status=base.status_rr.Connect()
 time.sleep(2)
 
 
-kf = KalmanFilter(dim_x=1, dim_z=1,dim_u=1)
+ekf = ExtendedKalmanFilter(dim_x=3, dim_z=1,dim_u=1)
 
 # define initial state
-kf.x = np.array([[3.]])
+kf.x = np.array([[0., 0., 3.]])
 
 # define A matrix
 kf.F = np.array([[0.]])
