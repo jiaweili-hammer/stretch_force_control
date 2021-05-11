@@ -2,7 +2,28 @@ from general_robotics_toolbox import Robot, fwdkin, robotjacobian
 from RobotRaconteur.Client import *     #import RR client library
 import sys, time
 import numpy as np
+from scipy.signal import filtfilt
+from scipy import stats
+import matplotlib.pyplot as plt
+import scipy
+
+
 url='rr+tcp://192.168.1.64:23232/?service=stretch'
+
+def bandpassfilter(signal):
+	fs = 25.0
+	lowcut = 2
+	#highcut = 50.0
+
+	nyq = 0.5*fs
+	low = lowcut / nyq
+	#high = highcut / nyq
+
+	order = 6
+	b,a = scipy.signal.butter(order, low, btype='low', analog=False)
+	y = scipy.signal.filtfilt(b,a,signal, axis=0)
+
+	return y
 
 #Startup, connect, and pull out different objects from robot object   
 robot=RRN.ConnectService(url)
@@ -32,7 +53,7 @@ robot_def=Robot(H,np.transpose(P),joint_type)
 '''
 
 # generalized damper setting, dim:6X4
-D_des = 1000*np.eye(4)
+D_des = 100*np.eye(4)
 
 # start the robot
 lift.move_to(0.5) 
@@ -52,17 +73,22 @@ while True:
 		P23_0 = -0.28
 		P3T_y = -0.05
 		
-		#FT = np.array([[0],[arm_status.InValue['force']],[-lift_status.InValue['force']]])
+		
 		print('Reading force')
 
 		#dim: 4X1
-		robot_FT = np.array([[base_status.InValue['rotation_torque']], [-base_status.InValue['translation_force']],[arm_status.InValue['force']],[-lift_status.InValue['force']]])
-
+		#FT = np.array([[0],[arm_status.InValue['force']],[-lift_status.InValue['force']]])
+		#FT_raw = np.array([[base_status.InValue['rotation_torque']], [-base_status.InValue['translation_force']],[arm_status.InValue['force']],[-lift_status.InValue['force']]])
+		FT_raw = np.array([base_status.InValue['rotation_torque'], -base_status.InValue['translation_force'], arm_status.InValue['force'], -lift_status.InValue['force']])
+		print('checkpoint1')
+		FT_temp = bandpassfilter(FT_raw)
+		print('checkpoint2')
+		FT_filtered = np.array([[FT_temp[None,0]], [FT_temp[None,1]], [FT_temp[None,2]], [FT_temp[None,3]], [FT_temp[None,4]]])
 		D_des_inv = np.linalg.inv(D_des)
 
 		print('D_des_inv:',D_des_inv)
 		
-		v_eef = np.dot(D_des_inv,robot_FT)
+		v_eef = np.dot(D_des_inv,FT_filtered)
 		#sudo_J = np.linalg.pinv(robotjacobian(robot_def,theta)[3:]) #sudo inverse of J_translate
 
 		print('check1')

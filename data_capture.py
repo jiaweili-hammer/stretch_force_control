@@ -22,37 +22,27 @@ lift.move_to(0.5)
 arm.move_to(0.3)
 end_of_arm.move_to('wrist_yaw',0)
 end_of_arm.move_to('stretch_gripper',25) ##(50 to -100)
-base.translate_by(0.1)		
+base.translate_by(0.3)		
 robot.push_command()
 time.sleep(3)
 now=time.time()
-data = np.zeros(500)
+data = []
 count = 0
 while True:
 	try:
-		#Command joint to move sinusoidal motion
-		#print force reading from arm
-		#time.sleep(0.1)
-		#print(base_status.InValue['translation_force']) #base torque
-		#print(end_of_arm_status.InValue['theta'])
-		#print(base_status.InValue['theta'])
-		#print(arm_status.InValue['force'])
-		#print(arm_status.InValue['motor']['current'])
 		
-		if count<500:
-			data[count] = lift_status.InValue['force']
-			count = count+1
-		else:
-			break
+		data.append(arm_status.InValue['force'])
+		count = count+1
 		time.sleep(0.05)
 	except:
 		break
-
+data = np.array(data)
 print ('Retracting...')
 np.save('sensor_data_1.npy',data)
 lift.move_to(0.3)
 arm.move_to(0.0)
 end_of_arm.move_to('wrist_yaw',0.)
 end_of_arm.move_to('stretch_gripper',0.)
+base.translate_by(-0.15)
 robot.push_command( )
 time.sleep(3)
