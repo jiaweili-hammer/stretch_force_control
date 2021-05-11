@@ -53,7 +53,7 @@ robot_def=Robot(H,np.transpose(P),joint_type)
 '''
 
 # generalized damper setting, dim:6X4
-D_des = 100*np.eye(4)
+D_des = 500*np.eye(4)
 
 # start the robot
 lift.move_to(0.5) 
@@ -79,11 +79,30 @@ while True:
 		#dim: 4X1
 		#FT = np.array([[0],[arm_status.InValue['force']],[-lift_status.InValue['force']]])
 		#FT_raw = np.array([[base_status.InValue['rotation_torque']], [-base_status.InValue['translation_force']],[arm_status.InValue['force']],[-lift_status.InValue['force']]])
-		FT_raw = np.array([base_status.InValue['rotation_torque'], -base_status.InValue['translation_force'], arm_status.InValue['force'], -lift_status.InValue['force']])
-		print('checkpoint1')
-		FT_temp = bandpassfilter(FT_raw)
-		print('checkpoint2')
-		FT_filtered = np.array([[FT_temp[None,0]], [FT_temp[None,1]], [FT_temp[None,2]], [FT_temp[None,3]], [FT_temp[None,4]]])
+		
+		count = 0
+		base_torque = [];
+		base_force = [];
+		arm_force = [];
+		lift_force = [];
+		while count < 25:
+			print('checkpoint',count)
+			base_torque.append(base_status.InValue['rotation_torque'])
+			base_force.append(-base_status.InValue['translation_force'])
+			arm_force.append(arm_status.InValue['force'])
+			lift_force.append(-lift_status.InValue['force'])
+			count += 1
+		base_torque_filtered = np.array(bandpassfilter(base_torque))
+		base_force_filtered = np.array(bandpassfilter(base_force))
+		arm_force_filtered = np.array(bandpassfilter(arm_force))
+		lift_force_filtered = np.array(bandpassfilter(lift_force))
+
+		base_torque_mean = np.mean(base_torque_filtered)
+		base_force_mean = np.mean(base_force_filtered)
+		arm_force_mean = np.mean(arm_force_filtered)
+		lift_force_mean = np.mean(lift_force_filtered)
+
+		FT_filtered = np.array([[base_torque_mean], [base_force_mean], [arm_force_mean], [lift_force_mean]])
 		D_des_inv = np.linalg.inv(D_des)
 
 		print('D_des_inv:',D_des_inv)
