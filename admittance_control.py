@@ -62,14 +62,15 @@ while True:
 		
 		print('Reading force')
 
-		count = 0
-		base_torque = []
-		base_force = []
-		arm_force = []
-		lift_force = []
 
 		# collect 25 data points. When the num is reached, remove the oldest point and add the newest point
 		if filter_flag == 0:
+			count = 0
+			base_torque = []
+			base_force = []
+			arm_force = []
+			lift_force = []
+
 			while count < 25:
 				base_torque.append(base_status.InValue['rotation_torque'])
 				base_force.append(-base_status.InValue['translation_force'])
