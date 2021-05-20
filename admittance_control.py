@@ -38,20 +38,6 @@ lift_status=lift.status_rr.Connect()
 base_status=base.status_rr.Connect()
 time.sleep(2)
 
-'''
-ex=np.array([[1],[0],[0]])
-ey=np.array([[0],[1],[0]])
-ez=np.array([[0],[0],[1]])
-H=np.concatenate((ez,-1*ey),axis=1)
-p01=np.array([[0],[0],[0]])
-p12=np.array([[0],[0],[0]])
-p2T=np.array([[0],[0],[0]])
-num_joints=2
-P=np.concatenate((p01,p12,p2T),axis=1)
-joint_type=np.ones(num_joints)
-robot_def=Robot(H,np.transpose(P),joint_type)
-'''
-
 # generalized damper setting, dim:6X4
 D_des = 500*np.eye(4)
 
@@ -63,6 +49,7 @@ robot.push_command()
 time.sleep(3)
 print('controller starts')
 
+filter_flag = 0
 while True:
 	try:
 		print('Reading status')
@@ -73,25 +60,33 @@ while True:
 		P23_0 = -0.28
 		P3T_y = -0.05
 		
-		
 		print('Reading force')
 
-		#dim: 4X1
-		#FT = np.array([[0],[arm_status.InValue['force']],[-lift_status.InValue['force']]])
-		#FT_raw = np.array([[base_status.InValue['rotation_torque']], [-base_status.InValue['translation_force']],[arm_status.InValue['force']],[-lift_status.InValue['force']]])
-		
 		count = 0
-		base_torque = [];
-		base_force = [];
-		arm_force = [];
-		lift_force = [];
-		while count < 25:
-			print('checkpoint',count)
+		base_torque = []
+		base_force = []
+		arm_force = []
+		lift_force = []
+
+		# collect 25 data points. When the num is reached, remove the oldest point and add the newest point
+		if filter_flag == 0:
+			while count < 25:
+				base_torque.append(base_status.InValue['rotation_torque'])
+				base_force.append(-base_status.InValue['translation_force'])
+				arm_force.append(arm_status.InValue['force'])
+				lift_force.append(-lift_status.InValue['force'])
+				count += 1
+		else:
+			base_torque.pop(0)
+			base_force.pop(0)
+			arm_force.pop(0)
+			lift_force.pop(0)
 			base_torque.append(base_status.InValue['rotation_torque'])
 			base_force.append(-base_status.InValue['translation_force'])
 			arm_force.append(arm_status.InValue['force'])
 			lift_force.append(-lift_status.InValue['force'])
-			count += 1
+		
+		filter_flag = 1
 		base_torque_filtered = np.array(bandpassfilter(base_torque))
 		base_force_filtered = np.array(bandpassfilter(base_force))
 		arm_force_filtered = np.array(bandpassfilter(arm_force))
